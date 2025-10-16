@@ -53,9 +53,9 @@ def get_reverse_energyloss(projectile: catima.Projectile, material: catima.Mater
             projectile.T(e_initial)
             x_traversed += x_step
 
-#integrate energy loss starting from the initial energy to final energy
-#catima does not natively provide this type of method, only a calculate function which does a whole bunch of other stuff too
-#returns the total energy loss through the material
+# integrate energy loss starting from the initial energy to final energy
+# catima does not natively provide this type of method, only a calculate function which does a whole bunch of other stuff too
+# returns the total energy loss through the material
 def get_energyloss(projectile: catima.Projectile, material: catima.Material) -> float:
     depth = 0
     e_in = projectile.T() # MeV/u

@@ -10,8 +10,6 @@ from .SpancUI import run_spanc_ui, SpancGUI
 import sys
 import matplotlib as mpl
 
-# no qdarktheme and instead use Qt style
-#from qdarktheme import load_stylesheet
 
 class Launcher(QMainWindow):
     def __init__(self, parent=None):
@@ -36,7 +34,6 @@ class Launcher(QMainWindow):
         SPSPlotGUI(self)
 
     def handle_spanc(self) -> None:
-        #run_spanc_ui()
         SpancGUI(self)
 
 

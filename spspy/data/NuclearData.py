@@ -1,8 +1,8 @@
 import numpy as np
+import pandas as pd
 import requests as req
 import lxml.html as xhtml
 from dataclasses import dataclass
-import time
 
 PATH_TO_MASSFILE = "./etc/amdc2016_mass.txt"
 
@@ -23,8 +23,6 @@ class NucleusData:
 
 def generate_nucleus_id(z: np.uint32, a: np.uint32) -> np.uint32 :
     return z*z + z + a if z > a else a*a + z
-# def generate_nucleus_id(z: int, a: int) -> int:
-#     return z*z + z + a if z > a else a*a + z
 
 class NuclearDataMap:
     U2MEV: float = 931.493614838475
@@ -50,94 +48,32 @@ class NuclearDataMap:
     def get_data(self, z: np.uint32, a: np.uint32) -> NucleusData:
         return self.map[generate_nucleus_id(z, a)]
 
+
 global_nuclear_data = NuclearDataMap()
 
-# def get_excitations(Z: int, A: int) -> list[float]:
-#     levels = []
-#     text = ''
-#     symbol = global_nuclear_data.get_data(Z, A).isotopicSymbol
-#     site = req.get(f"https://www.nndc.bnl.gov/nudat3/getdatasetClassic.jsp?nucleus={symbol}&unc=nds")
-#     contents = xhtml.fromstring(site.content)
-#     tables = contents.xpath("//table")
-#     rows = tables[2].xpath("./tr")
-#     for row in rows[1:-2]:
-#         entries = row.xpath("./td")
-#         if len(entries) != 0:
-#             entry = entries[0]
-#             data = entry.xpath("./a")
-#             if len(data) == 0:
-#                 text = entry.text
-#             else:
-#                 text = data[0].text
-#             text = text.replace('?', '')
-#             text = text.replace('\xa0\xa0≈','')
-#             levels.append(float(text)/1000.0) #convert to MeV
-#     return levels
-
-# def get_excitations(Z: int, A: int) -> list[float]:
-#     levels = []
-#     symbol = global_nuclear_data.get_data(Z, A).isotopicSymbol
-#     url = f"https://www.nndc.bnl.gov/nudat3/getdatasetClassic.jsp?nucleus={symbol}&unc=nds"
-#     site = req.get(url)
-
-#     if site.status_code != 200:
-#         raise RuntimeError(f"Failed to retrieve data for {symbol}. Status code: {site.status_code}")
-
-#     if not site.content.strip():
-#         raise RuntimeError(f"Empty document received for {symbol}")
-
-#     try:
-#         contents = xhtml.fromstring(site.content)
-#         tables = contents.xpath("//table")
-#         rows = tables[2].xpath("./tr")
-#         for row in rows[1:-2]:
-#             entries = row.xpath("./td")
-#             if len(entries) != 0:
-#                 entry = entries[0]
-#                 data = entry.xpath("./a")
-#                 text = data[0].text if data else entry.text
-#                 if text:
-#                     text = text.replace('?', '').replace('\xa0\xa0≈', '')
-#                     levels.append(float(text) / 1000.0)  # convert to MeV
-#     except Exception as e:
-#         raise RuntimeError(f"Error parsing data for {symbol}: {e}")
-
-#     return levels
 
 def get_excitations(Z: int, A: int) -> list[float]:
-    levels = []
-    symbol = global_nuclear_data.get_data(Z, A).isotopicSymbol
-    url = f"https://www.nndc.bnl.gov/nudat3/getdatasetClassic.jsp?nucleus={symbol}&unc=nds"
+    """
+    Get nuclear excitation levels (in MeV) using the IAEA LiveChart API.
+    Returns only excitation energies (no spin/parity), sorted in MeV.
+    """
+    symbol = global_nuclear_data.get_data(Z, A).isotopicSymbol.lower()
 
-    for attempt in range(3):  # Try up to 3 times
-        site = req.get(url)
-        if site.status_code == 200:
-            break
-        elif site.status_code == 429:
-            print(f"Rate limited (429). Waiting before retrying... (attempt {attempt+1})")
-            time.sleep(5)  # back off before retrying
-        else:
-            raise RuntimeError(f"Request failed with status code {site.status_code}")
-    else:
-        raise RuntimeError("Too many requests – giving up after 3 tries.")
+    # the service URL
+    livechart = "https://nds.iaea.org/relnsd/v1/data?"
 
-    contents = xhtml.fromstring(site.content)
-    tables = contents.xpath("//table")
-    rows = tables[2].xpath("./tr")
-    for row in rows[1:-2]:
-        entries = row.xpath("./td")
-        if len(entries) != 0:
-            entry = entries[0]
-            data = entry.xpath("./a")
-            if len(data) == 0:
-                text = entry.text
-            else:
-                text = data[0].text
-            text = text.replace('?', '').replace('\xa0\xa0≈','')
-            levels.append(float(text)/1000.0)
-    return levels
+    # There have been cases in which the service returns an HTTP Error 403: Forbidden
+    # use this workaround
+    import urllib.request
+    def lc_pd_dataframe(url):
+        req = urllib.request.Request(url)
+        req.add_header('User-Agent', 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:77.0) Gecko/20100101 Firefox/77.0')
+        return pd.read_csv(urllib.request.urlopen(req))
 
+    # load data into a dataframe 
+    df = lc_pd_dataframe(livechart + f"fields=levels&nuclides={symbol}")
 
-                
+    levels = (df['energy'].dropna().astype(float)/1000).tolist() #convert keV to MeV
 
-        
+    return sorted(levels)
+
