@@ -9,7 +9,9 @@ from .SpancUI import run_spanc_ui, SpancGUI
 
 import sys
 import matplotlib as mpl
-from qdarktheme import load_stylesheet
+
+# no qdarktheme and instead use Qt style
+#from qdarktheme import load_stylesheet
 
 class Launcher(QMainWindow):
     def __init__(self, parent=None):
@@ -39,10 +41,10 @@ class Launcher(QMainWindow):
 
 
 def run_launcher() -> None:
-    mpl.use("Qt5Agg")
+    mpl.use("QtAgg")
     app = QApplication.instance()
     if not app:
         app = QApplication(sys.argv)
-        app.setStyleSheet(load_stylesheet())
+        app.setStyle("Fusion")
     window = Launcher()
     sys.exit(app.exec_())

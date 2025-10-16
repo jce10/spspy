@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QPushButton, QTextEdit, QSpinBox
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtGui import QAction
 
-from qdarktheme import load_stylesheet, load_palette
+#from qdarktheme import load_stylesheet, load_palette
 import matplotlib as mpl
 import numpy as np
 from numpy.typing import NDArray

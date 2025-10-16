@@ -13,7 +13,8 @@ from PySide6.QtWidgets import QDoubleSpinBox
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtGui import QAction
 
-from qdarktheme import load_stylesheet
+#from qdarktheme import load_stylesheet
+
 from enum import Enum, auto
 import matplotlib as mpl
 import sys
@@ -91,19 +92,19 @@ class SPSPlotGUI(QMainWindow):
 
         self.spsGroupBox = QGroupBox("SPS Parameters", self.inputGroupBox)
         spsGroupLayout = QHBoxLayout()
-        rhoMinLabel = QLabel("<p>&rho;<sub>Min<\sub><\p>", self.spsGroupBox)
+        rhoMinLabel = QLabel(r"<p>&rho;<sub>Min</sub></p>", self.spsGroupBox)
         self.rhoMinInput = QDoubleSpinBox(self.spsGroupBox)
         self.rhoMinInput.setRange(0.0, 150.0)
         self.rhoMinInput.setValue(DEFAULT_RHO_MIN)
         self.sps.rhoMin = DEFAULT_RHO_MIN
         self.rhoMinInput.setSuffix(" cm")
-        rhoMaxLabel = QLabel("<p>&rho;<sub>Max<\sub><\p>", self.spsGroupBox)
+        rhoMaxLabel = QLabel(r"<p>&rho;<sub>Max</sub></p>", self.spsGroupBox)
         self.rhoMaxInput = QDoubleSpinBox(self.spsGroupBox)
         self.rhoMaxInput.setRange(0.0,150.0)
         self.rhoMaxInput.setValue(DEFAULT_RHO_MAX)
         self.sps.rhoMax = DEFAULT_RHO_MAX
         self.rhoMaxInput.setSuffix(" cm")
-        bkeLabel = QLabel("<p>E<sub>beam<\sub><\p>", self.spsGroupBox)
+        bkeLabel = QLabel(r"<p>E<sub>beam</sub></p>", self.spsGroupBox)
         self.bkeInput = QDoubleSpinBox(self.spsGroupBox)
         self.bkeInput.setRange(0.0, 500.0)
         self.bkeInput.setSuffix(" MeV")
@@ -111,7 +112,7 @@ class SPSPlotGUI(QMainWindow):
         self.bfieldInput = QDoubleSpinBox(self.spsGroupBox)
         self.bfieldInput.setRange(0.0, 17.0)
         self.bfieldInput.setSuffix(" kG")
-        angleLabel = QLabel("<p>&theta;<sub>SPS<\sub><\p>", self.spsGroupBox)
+        angleLabel = QLabel(r"<p>&theta;<sub>SPS</sub></p>", self.spsGroupBox)
         self.angleInput = QDoubleSpinBox(self.spsGroupBox)
         self.angleInput.setRange(0.0, 180.0)
         self.angleInput.setSuffix(" deg")
@@ -295,10 +296,10 @@ class SPSPlotGUI(QMainWindow):
 
 
 def run_spsplot_ui():
-    mpl.use("Qt5Agg")
+    mpl.use("QtAgg")
     app = QApplication.instance()
     if not app:
         app = QApplication(sys.argv)
-        app.setStyleSheet(load_stylesheet())
+        app.setStyle("Fusion")
     window = SPSPlotGUI()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
