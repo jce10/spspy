@@ -9,6 +9,7 @@ lxml==6.0.0
 matplotlib==3.10.3
 numpy==2.3.1
 packaging==25.0
+pandas==2.3.3
 pillow==11.3.0
 pycatima==1.98
 pyparsing==3.2.3
@@ -16,10 +17,12 @@ PySide6==6.9.1
 PySide6_Addons==6.9.1
 PySide6_Essentials==6.9.1
 python-dateutil==2.9.0.post0
+pytz==2025.2
 requests==2.32.4
 scipy==1.16.0
 setuptools==80.9.0
 shiboken6==6.9.1
 six==1.17.0
+tzdata==2025.2
 urllib3==2.5.0
 wheel==0.45.1
