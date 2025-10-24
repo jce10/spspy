@@ -11,7 +11,8 @@ Updated 10/2025 to fix incompatibilities of outdated libraries with Python v3.12
 	python3 -m venv .venv
 	source .venv.bin/activate
 	pip install -r requirements.txt
-Note: it is highly recommended. can name your virtual enviornment something other than ".venv" -- edit this to whatever you'd like. To deactivate the environment, use the command `deactivate` in the active terminal. 
+Note: `pip` is highly recommended as the package installer. 
+Note x2: You can name your virtual enviornment something other than ".venv" -- edit this to whatever you'd like. To deactivate the environment, use the command `deactivate` in the active terminal. 
 
 ## Nuclear Data
 Based on the inputs from the user, `NuclearData.py` utilizes the Livechart Data Download [API](https://www-nds.iaea.org/relnsd/vcharthtml/api_v0_guide.html) services from IAEA. Currently, the API allows for CSV formatting, with development for other format types under construction. `NuclearData.py` fetches levels for the inputted reaction, the CSV is generated, and levels saved to a `pandas` `DataFrame` for future use. 
