@@ -13,8 +13,6 @@ from PySide6.QtWidgets import QDoubleSpinBox
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtGui import QAction
 
-#from qdarktheme import load_stylesheet
-
 from enum import Enum, auto
 import matplotlib as mpl
 import sys
@@ -22,6 +20,9 @@ import pickle
 
 DEFAULT_RHO_MIN: float = 69.0
 DEFAULT_RHO_MAX: float = 87.0
+DEFAULT_BKE: float = 20.0
+DEFAULT_BFIELD: float= 10.0
+DEFAULT_ANGLE: float=3.0
 
 class PlotType(Enum):
     PLOT_EX = auto()
@@ -54,10 +55,12 @@ class SPSPlotGUI(QMainWindow):
         self.create_inputs()
         self.create_target_table()
         self.update_plot()
+        self.statusBar().showMessage(f"")
         self.show()
 
     def create_canvas(self) -> None:
         self.canvas = MPLCanvas(self.plotTab, width=14, height=5, dpi=100)
+        self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         self.plotLayout.addWidget(self.canvas, 4)
 
     def create_menus(self) -> None:
@@ -106,16 +109,19 @@ class SPSPlotGUI(QMainWindow):
         self.rhoMaxInput.setSuffix(" cm")
         bkeLabel = QLabel(r"<p>E<sub>beam</sub></p>", self.spsGroupBox)
         self.bkeInput = QDoubleSpinBox(self.spsGroupBox)
-        self.bkeInput.setRange(0.0, 500.0)
+        self.bkeInput.setRange(1e-4, 500.0)
+        self.bkeInput.setValue(DEFAULT_BKE)
         self.bkeInput.setSuffix(" MeV")
         bfieldLabel = QLabel("B", self.spsGroupBox)
         self.bfieldInput = QDoubleSpinBox(self.spsGroupBox)
-        self.bfieldInput.setRange(0.0, 17.0)
+        self.bfieldInput.setRange(1e-4, 17.0)
+        self.bfieldInput.setValue(DEFAULT_BFIELD)
         self.bfieldInput.setSuffix(" kG")
         angleLabel = QLabel(r"<p>&theta;<sub>SPS</sub></p>", self.spsGroupBox)
         self.angleInput = QDoubleSpinBox(self.spsGroupBox)
         self.angleInput.setRange(0.0, 180.0)
         self.angleInput.setSuffix(" deg")
+        self.angleInput.setValue(DEFAULT_ANGLE)
         self.runButton = QPushButton("Set", self.spsGroupBox)
         self.runButton.clicked.connect(self.handle_run)
         spsGroupLayout.addWidget(rhoMinLabel, 1)
@@ -247,16 +253,33 @@ class SPSPlotGUI(QMainWindow):
         exs = []
         kes = []
         zs = []
-        rxns = []		
+        rxns = []
+        over_rhos = []
+        under_rhos = []
         for rxnNumber, rxn in enumerate(self.sps.data.values()):
+            over_rho = False
+            under_rho = False
             for point in rxn.excitations:
-                rxns.append(rxnNumber+1)
-                rhos.append(point.rho)
-                exs.append(point.excitation)
-                kes.append(point.kineticEnergy)
-                zs.append(point.fpZ)
+                if(point.rho > self.sps.rhoMax):
+                    over_rho = True
+                elif(point.rho < self.sps.rhoMin):
+                    under_rho = True
+                else:
+                    rxns.append(rxnNumber+1)
+                    rhos.append(point.rho)
+                    exs.append(point.excitation)
+                    kes.append(point.kineticEnergy)
+                    zs.append(point.fpZ)
+            over_rhos.append((rxnNumber+1,over_rho))
+            under_rhos.append((rxnNumber+1,under_rho))
         self.canvas.axes.cla()
         self.canvas.axes.plot(rhos, rxns, marker="o", linestyle="None")
+        for rxnIndex,is_over_rho in over_rhos:
+            if is_over_rho:
+                self.canvas.axes.plot(self.sps.rhoMax,rxnIndex,marker=">",linestyle="None")
+        for rxnIndex,is_under_rho in under_rhos:
+            if is_under_rho:
+                self.canvas.axes.plot(self.sps.rhoMin,rxnIndex,marker="<",linestyle="None")
         for i in range(len(rxns)):
             y = rxns[i]
             x = rhos[i]
@@ -267,14 +290,16 @@ class SPSPlotGUI(QMainWindow):
                 label = "{:.2f}".format(kes[i])
             elif self.plotType == PlotType.PLOT_Z:
                 label = "{:.2f}".format(zs[i])
-            self.canvas.axes.annotate(label, (x,y), textcoords="offset points",xytext=(0,10),ha="center",rotation="vertical")
+            if x > self.sps.rhoMin:
+	            self.canvas.axes.annotate(label, (x,y), textcoords="offset points",xytext=(0,10),ha="center",rotation="vertical")
         ylabels = [r.rxn.get_latex_rep() for r in self.sps.data.values()]
         ylabels.append("Reactions")
         self.canvas.axes.set_xlim(self.sps.rhoMin, self.sps.rhoMax)
         self.canvas.axes.set_yticks(range(1,len(self.sps.data)+2))
         self.canvas.axes.set_yticklabels(ylabels)
         self.canvas.axes.set_xlabel(r"$\rho$ (cm)")
-        self.canvas.draw()
+        self.canvas.v_line = self.canvas.axes.axvline(color='w', linestyle='--', alpha=0.4, linewidth=1)
+        self.canvas.draw_idle()
 
     def update_inputs(self):
         self.rhoMinInput.setValue(self.sps.rhoMin)
@@ -292,7 +317,12 @@ class SPSPlotGUI(QMainWindow):
                 self.targetTable.setCellWidget(row, 1+col*2, QLabel(str(layer)))
         self.targetTable.resizeColumnsToContents()
         self.targetTable.resizeRowsToContents()
-        
+
+    def on_mouse_move(self,event):
+        if event.inaxes:
+            self.statusBar().showMessage(f"x={event.xdata}")
+            self.canvas.v_line.set_xdata([event.xdata,event.xdata])
+            self.canvas.draw_idle()
 
 
 def run_spsplot_ui():
@@ -302,4 +332,5 @@ def run_spsplot_ui():
         app = QApplication(sys.argv)
         app.setStyle("Fusion")
     window = SPSPlotGUI()
+    window.setWindowOpacity(0.75)
     sys.exit(app.exec())

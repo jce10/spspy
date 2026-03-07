@@ -47,7 +47,7 @@ class ReactionDialog(QDialog):
         self.layout.addWidget(self.buttonBox)
 
     def send_reaction(self) -> None :
-        params = create_reaction_parameters(self.ztInput.value(), self.atInput.value(), self.zpInput.value(), self.apInput.value(), self.zeInput.value(), self.aeInput.value())
+        params = create_reaction_parameters(self.ztInput.value(), self.atInput.value(), self.zpInput.value(), self.apInput.value(), self.zeInput.value(), self.aeInput.value(), self.qseInput.value())
         if self.extraParams == True:
             params.beamEnergy = self.bkeInput.value()
             params.spsAngle = self.thetaInput.value()
@@ -73,12 +73,15 @@ class ReactionDialog(QDialog):
         self.zeInput.setRange(1, MAXIMUM_NUCLEAR_Z)
         self.aeInput = QSpinBox(self.nucleiGroupBox)
         self.aeInput.setRange(1, MAXIMUM_NUCLEAR_A)
+        self.qseInput = QSpinBox(self.nucleiGroupBox)
+        self.qseInput.setRange(1, MAXIMUM_NUCLEAR_Z)
         inputLayout.addRow("ZT",self.ztInput)
         inputLayout.addRow("AT",self.atInput)
         inputLayout.addRow("ZP",self.zpInput)
         inputLayout.addRow("AP",self.apInput)
         inputLayout.addRow("ZE",self.zeInput)
         inputLayout.addRow("AE",self.aeInput)
+        inputLayout.addRow("QSE",self.qseInput)
 
         self.nucleiGroupBox.setLayout(inputLayout)
         self.layout.addWidget(self.nucleiGroupBox)
@@ -116,6 +119,8 @@ class ReactionDialog(QDialog):
         self.zeInput.setEnabled(False)
         self.aeInput.setValue(rxn.params.ejectile.A)
         self.aeInput.setEnabled(False)
+        self.qseInput.setValue(rxn.params.ejectile.Z)
+        self.qseInput.setEnabled(False)
         self.bkeInput.setValue(rxn.params.beamEnergy)
         self.thetaInput.setValue(rad2deg(rxn.params.spsAngle))
         self.bfieldInput.setValue(rxn.params.magneticField)

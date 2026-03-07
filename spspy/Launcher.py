@@ -9,7 +9,7 @@ from .SpancUI import run_spanc_ui, SpancGUI
 
 import sys
 import matplotlib as mpl
-
+#import qdarktheme
 
 class Launcher(QMainWindow):
     def __init__(self, parent=None):
@@ -44,4 +44,5 @@ def run_launcher() -> None:
         app = QApplication(sys.argv)
         app.setStyle("Fusion")
     window = Launcher()
+    #qdarktheme.setup_theme("dark")
     sys.exit(app.exec_())

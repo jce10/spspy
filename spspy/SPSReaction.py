@@ -10,12 +10,15 @@ class RxnParameters:
     target: NucleusData
     projectile: NucleusData
     ejectile: NucleusData
-    beamEnergy: float = 0.0 #MeV
-    magneticField: float = 0.0 #kG
-    spsAngle: float = 0.0 #rad
+    ejectile_qs: int = 0 #ejectile charge-state
+    beamEnergy: float = 10.0 #MeV
+    magneticField: float = 10.0 #kG
+    spsAngle: float = 3.0 #rad
 
-def create_reaction_parameters(zt: int, at: int, zp: int, ap: int, ze: int, ae: int) -> RxnParameters:
-    return RxnParameters(global_nuclear_data.get_data(zt, at), global_nuclear_data.get_data(zp, ap), global_nuclear_data.get_data(ze, ae))
+def create_reaction_parameters(zt: int, at: int, zp: int, ap: int, ze: int, ae: int, eqs: int) -> RxnParameters:
+    rp = RxnParameters(global_nuclear_data.get_data(zt, at), global_nuclear_data.get_data(zp, ap), global_nuclear_data.get_data(ze, ae))
+    rp.ejectile_qs = eqs
+    return rp
 
 class Reaction:
     C = 299792458 #speed of light m/s
@@ -40,13 +43,13 @@ class Reaction:
         self.Qvalue = self.params.target.mass + self.params.projectile.mass - self.params.ejectile.mass - self.residual.mass
 
     def __str__(self) -> str:
-        return f"{self.params.target.prettyIsotopicSymbol}({self.params.projectile.prettyIsotopicSymbol},{self.params.ejectile.prettyIsotopicSymbol}){self.residual.prettyIsotopicSymbol}"
+        return f"{self.params.target.prettyIsotopicSymbol}({self.params.projectile.prettyIsotopicSymbol},{self.params.ejectile.prettyIsotopicSymbol}({self.params.ejectile_qs}+)){self.residual.prettyIsotopicSymbol}"
 
     def __repr__(self) -> str:
-        return f"{self.params.target.isotopicSymbol}({self.params.projectile.isotopicSymbol},{self.params.ejectile.isotopicSymbol}){self.residual.isotopicSymbol}_{self.params.beamEnergy}MeV_{self.params.spsAngle}rad_{self.params.magneticField}kG"
+        return f"{self.params.target.isotopicSymbol}({self.params.projectile.isotopicSymbol},{self.params.ejectile.isotopicSymbol}({self.params.ejectile_qs}+)){self.residual.isotopicSymbol}_{self.params.beamEnergy}MeV_{self.params.spsAngle}rad_{self.params.magneticField}kG"
 
     def get_latex_rep(self) -> str:
-        return f"{self.params.target.get_latex_rep()}({self.params.projectile.get_latex_rep()},{self.params.ejectile.get_latex_rep()}){self.residual.get_latex_rep()}"
+        return f"{self.params.target.get_latex_rep()}({self.params.projectile.get_latex_rep()},{self.params.ejectile.get_latex_rep()}({self.params.ejectile_qs}+)){self.residual.get_latex_rep()}"
 
     #MeV
     def calculate_ejectile_KE(self, excitation: float) -> float:
@@ -79,7 +82,8 @@ class Reaction:
         p = sqrt( ejectileEnergy * (ejectileEnergy + 2.0 * self.params.ejectile.mass))
         #convert to QBrho
         qbrho = p/self.QBRHO2P
-        return qbrho / (float(self.params.ejectile.Z) * self.params.magneticField)
+        #return qbrho / (float(self.params.ejectile.Z) * self.params.magneticField)
+        return qbrho / (float(self.params.ejectile_qs) * self.params.magneticField)
 
     def calculate_excitation(self, rho: float) -> float:
         ejectileP = rho * float(self.params.ejectile.Z) * self.params.magneticField * self.QBRHO2P
