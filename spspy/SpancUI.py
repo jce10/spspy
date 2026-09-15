@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QPushButton, QTextEdit, QSpinBox
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtGui import QAction
 
-#from qdarktheme import load_stylesheet, load_palette
+# from qdarktheme import load_stylesheet, load_palette
 import matplotlib as mpl
 import numpy as np
 from numpy.typing import NDArray
@@ -54,14 +54,17 @@ class SpancGUI(QMainWindow):
         self.fileMenu = self.menuBar().addMenu("&File")
         saveAction = QAction("&Save...",self)
         openAction = QAction("&Open...",self)
-        saveFitAction = QAction("Save Fit Plot...", self)
+        saveFitAction = QAction("Save Calibration Plot...", self)
+        saveResidualAction = QAction("Save Residual Plot...", self)
         self.fileMenu.addAction(saveAction)
         self.fileMenu.addAction(openAction)
         self.fileMenu.addAction(saveFitAction)
+        self.fileMenu.addAction(saveResidualAction)
         self.fileMenu.addAction("&Exit", self.close)
         saveAction.triggered.connect(self.handle_save)
         openAction.triggered.connect(self.handle_open)
         saveFitAction.triggered.connect(self.handle_save_fit)
+        saveResidualAction.triggered.connect(self.handle_save_residual)
         
         self.addMenu = self.menuBar().addMenu("&New")
         newTargetAction = QAction("New target...", self)
@@ -175,9 +178,18 @@ class SpancGUI(QMainWindow):
                 savefile.close()
 
     def handle_save_fit(self) -> None:
-        fileName = QFileDialog.getSaveFileName(self, "Save Fit Image","./","Image Files (*.png, *.eps)")
+        fileName = QFileDialog.getSaveFileName(
+            self, "Save Calibration Plot", "./", "Image Files (*.png *.eps *.pdf)"
+        )
         if fileName[0]:
             self.fitCanvas.fig.savefig(fileName[0])
+
+    def handle_save_residual(self) -> None:
+        fileName = QFileDialog.getSaveFileName(
+            self, "Save Residual Plot", "./", "Image Files (*.png *.eps *.pdf)"
+        )
+        if fileName[0]:
+            self.residCanvas.fig.savefig(fileName[0])
 
     def handle_open(self) -> None:
         fileName = QFileDialog.getOpenFileName(self, "Open Input","./","SPANC Files (*.spanc)")
@@ -292,9 +304,17 @@ class SpancGUI(QMainWindow):
         self.fitFlag = True
 
         residData = self.spanc.get_residuals()
-        xArray, residArray, studentResidArray = convert_resid_points_to_arrays(residData)
+        xArray, residArray, residErrArray, studentResidArray = convert_resid_points_to_arrays(residData)
         self.residCanvas.axes.cla()
-        self.residCanvas.axes.plot(xArray, residArray, marker="o", linestyle="None")
+        self.residCanvas.axes.errorbar(
+            xArray,
+            residArray,
+            yerr=residErrArray,
+            marker="o",
+            linestyle="None",
+            elinewidth=2.0,
+            capsize=3.0,
+        )
         self.residCanvas.axes.hlines(0.0, xMin, xMax, colors="r", linestyles="dashed")
         self.residCanvas.axes.set_xlabel(r"$x$ (mm)")
         self.residCanvas.axes.set_ylabel(r"Residual (cm)")
