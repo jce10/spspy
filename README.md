@@ -21,7 +21,7 @@ Based on the inputs from the user, `NuclearData.py` utilizes the Livechart Data 
 This tool is intended to be used for guiding the settings of the SPS to show specific states on the focal plane detector. The user inputs reaction information, and the program runs through the kinematics to calculate the energies of ejecta into the the SESPS via the [PyCatima](https://github.com/hrosiak/pycatima) module. Updated 10/2025 with pyCatima v1.98. 
 
 SPSPlot displays excitation energies of the state, the kinetic energy of the ejectile, or the focal plane z-offset for a state. SPSPlot can also export the calculated reaction information to a csv file. 
-Note: that since levels are obtained from NNDC, SPSPlot requires an internet connection.
+Note: that since levels are obtained from IAEA, SPSPlot requires an internet connection.
 
 ## SPANC
 SPANC is the program used to calibrate SESPS focal plane spectra. It works by the user specifying a target, reaction, calibration peaks, and output peaks. The target is a description of the physical target foil used in the SPS, which is used to calculate energy loss effects. 
