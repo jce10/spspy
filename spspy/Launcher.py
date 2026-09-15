@@ -9,21 +9,28 @@ from .SpancUI import run_spanc_ui, SpancGUI
 
 import sys
 import matplotlib as mpl
-#import qdarktheme
+# import qdarktheme
 
 class Launcher(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle("SPSPY Launcher")
+        self.setMinimumSize(800, 600)
+        self.resize(1000, 700)
         self.mainLayout = QVBoxLayout()
         self.mainWidget = QWidget(self)
         self.setCentralWidget(self.mainWidget)
         self.mainWidget.setLayout(self.mainLayout)
 
         self.spsplotButton = QPushButton("Launch SPSPlot", self.mainWidget)
+        self.spsplotButton.setMinimumHeight(100)
+        self.spsplotButton.setStyleSheet("font-size: 24px;")
         self.spsplotButton.clicked.connect(self.handle_spsplot)
+
         self.spancButton = QPushButton("Launch SPANC", self.mainWidget)
+        self.spancButton.setMinimumHeight(100)
+        self.spancButton.setStyleSheet("font-size: 24px;")
         self.spancButton.clicked.connect(self.handle_spanc)
 
         self.mainLayout.addWidget(self.spsplotButton)
@@ -44,5 +51,5 @@ def run_launcher() -> None:
         app = QApplication(sys.argv)
         app.setStyle("Fusion")
     window = Launcher()
-    #qdarktheme.setup_theme("dark")
+    # qdarktheme.setup_theme("dark")
     sys.exit(app.exec_())
