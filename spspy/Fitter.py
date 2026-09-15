@@ -38,20 +38,25 @@ def convert_fit_points_to_arrays(
 class FitResidual:
     x: float = 0.0
     residual: float = 0.0
+    residualError: float = 0.0
     studentizedResidual: float = 0.0
 
 
 def convert_resid_points_to_arrays(
     data: list[FitResidual],
-) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+) -> tuple[
+    NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]
+]:
     xArray = np.empty(len(data))
     residArray = np.empty(len(data))
+    residErrorArray = np.empty(len(data))
     studentResidArray = np.empty(len(data))
     for index, point in enumerate(data):
         xArray[index] = point.x
         residArray[index] = point.residual
+        residErrorArray[index] = point.residualError
         studentResidArray[index] = point.studentizedResidual
-    return xArray, residArray, studentResidArray
+    return xArray, residArray, residErrorArray, studentResidArray
 
 
 class Fitter:
@@ -90,8 +95,14 @@ class Fitter:
         return np.array({INVALID_FIT_RESULT})
 
     def get_ndf(self) -> int:
-        if self.fitResults is not None:
-            return len(self.fitData) - 1
+        """Return the number of degrees of freedom for the polynomial fit.
+
+        A polynomial of order ``m`` has ``m + 1`` fitted coefficients, so
+        NDF = N_data - (m + 1).
+        """
+        if self.fitResults is not None and self.fitData is not None:
+            n_parameters = len(self.fitResults.beta)
+            return len(self.fitData) - n_parameters
         return INVALID_NDF
 
     def evaluate(self, x: float) -> float:
@@ -110,40 +121,71 @@ class Fitter:
         return INVALID_FIT_RESULT
 
     def get_chisquare(self) -> float:
+        """Return ODR's weighted sum of squares (chi-square-like statistic)."""
         if self.fitResults is None:
             return INVALID_FIT_RESULT
-        return self.fitResults.res_var * self.get_ndf()
+        return float(self.fitResults.sum_square)
 
     def get_reduced_chisquare(self) -> float:
+        """Return the weighted sum of squares per degree of freedom."""
         if self.fitResults is None:
             return INVALID_FIT_RESULT
-        return self.fitResults.res_var
+
+        ndf = self.get_ndf()
+        if ndf <= 0:
+            return INVALID_FIT_RESULT
+
+        return self.get_chisquare() / ndf
 
     def get_residuals(self) -> list[FitResidual]:
-        if self.fitData is not None:
-            fitResiduals = [
-                FitResidual(point.x, point.y - self.evaluate(point.x), 0.0)
-                for point in self.fitData
-            ]
+        if self.fitData is None or self.fitResults is None:
+            return []
 
-            # compute the leverage and studentize
-            xMean = 0.0
-            rmse = 0.0
-            npoints = len(fitResiduals)
-            for resid in fitResiduals:
-                xMean += resid.x
-                rmse += resid.residual**2.0
-            xMean /= npoints
-            rmse /= self.get_ndf()
+        # For r = y - f(x), propagate the measurement uncertainties in both
+        # coordinates into the vertical residual direction:
+        #
+        #   sigma_r^2 = sigma_y^2 + [f'(x) sigma_x]^2
+        #
+        # This matches the x/y uncertainty information supplied to the ODR fit.
+        fitResiduals = []
+        for point in self.fitData:
+            residual = point.y - self.evaluate(point.x)
+            residualError = np.sqrt(
+                point.yError**2.0
+                + (self.evaluate_derivative(point.x) * point.xError) ** 2.0
+            )
+            fitResiduals.append(
+                FitResidual(point.x, residual, residualError, 0.0)
+            )
 
-            meanDiffSq = 0.0
-            for resid in fitResiduals:
-                meanDiffSq += (resid.x - xMean) ** 2.0
-            meanDiffSq /= npoints
-            for resid in fitResiduals:
-                leverage = 1.0 / npoints + (resid.x - xMean) / meanDiffSq
-                resid.studentizedResidual = resid.residual / (
-                    rmse * np.sqrt(1.0 - leverage)
-                )
+        ndf = self.get_ndf()
+        if ndf <= 0:
             return fitResiduals
-        return []
+
+        # Studentized residuals are used here only as a diagnostic for the
+        # polynomial calibration.  Compute the leverage from the polynomial
+        # design matrix, H = X (X^T X)^(-1) X^T, and use the usual internally
+        # studentized residual definition r_i / [s sqrt(1 - h_ii)].
+        #
+        # Note: the fitted coefficients themselves come from ODR (which can
+        # include uncertainties in both x and y), so these studentized
+        # residuals should be interpreted as an approximate diagnostic rather
+        # than as an exact ODR goodness-of-fit statistic.
+        x = np.asarray([point.x for point in self.fitData], dtype=float)
+        residuals = np.asarray([resid.residual for resid in fitResiduals], dtype=float)
+
+        design = np.vander(x, N=self.polynomialOrder + 1, increasing=True)
+        hat = design @ np.linalg.pinv(design.T @ design) @ design.T
+        leverage = np.clip(np.diag(hat), 0.0, 1.0)
+
+        rss = float(np.sum(residuals**2))
+        residual_std = np.sqrt(rss / ndf)
+
+        if residual_std == 0.0:
+            return fitResiduals
+
+        for resid, h_ii in zip(fitResiduals, leverage):
+            denom = residual_std * np.sqrt(max(1.0 - h_ii, np.finfo(float).eps))
+            resid.studentizedResidual = resid.residual / denom
+
+        return fitResiduals
