@@ -2,8 +2,27 @@ from ..Spanc import Peak, PeakType, INVALID_PEAK_ID
 from PySide6.QtWidgets import QLabel
 from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QGroupBox
 from PySide6.QtWidgets import QComboBox, QDoubleSpinBox
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPushButton
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QApplication
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QKeySequence
+
+
+class PasteDoubleSpinBox(QDoubleSpinBox):
+    """QDoubleSpinBox with explicit Ctrl+V clipboard handling."""
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.StandardKey.Paste):
+            text = QApplication.clipboard().text()
+
+            try:
+                self.setValue(float(text))
+            except ValueError:
+                pass
+
+            return
+
+        super().keyPressEvent(event)
+
 
 class PeakDialog(QDialog):
     new_peak = Signal(Peak)
@@ -50,18 +69,18 @@ class PeakDialog(QDialog):
     def create_calibration_inputs(self) -> None:
         self.inputGroupBox = QGroupBox("Peak Parameters",self)
         inputLayout = QFormLayout()
-        self.xInput = QDoubleSpinBox(self.inputGroupBox)
+        self.xInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.xInput.setRange(-999, 999)
         self.xInput.setDecimals(6)
-        self.uxsysInput = QDoubleSpinBox(self.inputGroupBox)
+        self.uxsysInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.uxsysInput.setRange(-999, 999)
         self.uxsysInput.setDecimals(6)
-        self.uxstatInput = QDoubleSpinBox(self.inputGroupBox)
+        self.uxstatInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.uxstatInput.setRange(-999, 999)
         self.uxstatInput.setDecimals(6)
-        self.exInput = QDoubleSpinBox(self.inputGroupBox)
+        self.exInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.exInput.setDecimals(6)
-        self.uexInput = QDoubleSpinBox(self.inputGroupBox)
+        self.uexInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.uexInput.setDecimals(6)
         inputLayout.addRow("Position(mm)", self.xInput)
         inputLayout.addRow("Position Sys. Error(mm)", self.uxsysInput)
@@ -74,18 +93,18 @@ class PeakDialog(QDialog):
     def create_output_inputs(self) -> None:
         self.inputGroupBox = QGroupBox("Peak Parameters",self)
         inputLayout = QFormLayout()
-        self.xInput = QDoubleSpinBox(self.inputGroupBox)
+        self.xInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.xInput.setRange(-999, 999)
         self.xInput.setDecimals(6)
-        self.uxsysInput = QDoubleSpinBox(self.inputGroupBox)
+        self.uxsysInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.uxsysInput.setRange(-999, 999)
         self.uxsysInput.setDecimals(6)
-        self.uxstatInput = QDoubleSpinBox(self.inputGroupBox)
+        self.uxstatInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.uxstatInput.setRange(-999, 999)
         self.uxstatInput.setDecimals(6)
-        self.fwhmInput = QDoubleSpinBox(self.inputGroupBox)
+        self.fwhmInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.fwhmInput.setDecimals(6)
-        self.ufwhmInput = QDoubleSpinBox(self.inputGroupBox)
+        self.ufwhmInput = PasteDoubleSpinBox(self.inputGroupBox)
         self.ufwhmInput.setDecimals(6)
         inputLayout.addRow("Position(mm)", self.xInput)
         inputLayout.addRow("Position Sys. Error(mm)", self.uxsysInput)
