@@ -65,11 +65,23 @@ class Fitter:
         self.fitResults: Optional[odr.Output] = None
         self.fitData: Optional[list[FitPoint]] = None
         self.function: Optional[Polynomial] = None
+        self.lastWarnings: list[str] = []
 
     def set_polynomial_order(self, order: int) -> None:
         self.polynomialOrder = order
 
-    def run(self, data: list[FitPoint] = None) -> None:
+    def invalidate(self) -> None:
+        """Clear a stale fit while preserving its selected polynomial order."""
+        self.fitResults = None
+        self.fitData = None
+        self.function = None
+        self.lastWarnings = []
+
+    def run(
+        self,
+        data: list[FitPoint] = None,
+        allowMissingErrors: bool = False,
+    ) -> None:
         if data is not None:
             self.fitData = data
 
@@ -77,7 +89,25 @@ class Fitter:
             xArray, yArray, xErrorArray, yErrorArray = convert_fit_points_to_arrays(
                 self.fitData
             )
-            modelData = odr.RealData(xArray, y=yArray, sx=xErrorArray, sy=yErrorArray)
+            self.lastWarnings = []
+            xErrors = xErrorArray
+            yErrors = yErrorArray
+
+            if allowMissingErrors:
+                if not np.all(np.isfinite(xErrorArray) & (xErrorArray > 0.0)):
+                    xErrors = None
+                    self.lastWarnings.append(
+                        "One or more position uncertainties are zero or missing; "
+                        "the energy fit omitted position-error weighting."
+                    )
+                if not np.all(np.isfinite(yErrorArray) & (yErrorArray > 0.0)):
+                    yErrors = None
+                    self.lastWarnings.append(
+                        "One or more excitation-energy uncertainties are zero or "
+                        "missing; the energy fit omitted energy-error weighting."
+                    )
+
+            modelData = odr.RealData(xArray, y=yArray, sx=xErrors, sy=yErrors)
             model = odr.polynomial(self.polynomialOrder)
             self.fitResults = odr.ODR(modelData, model).run()
             self.function = Polynomial(self.fitResults.beta)
@@ -136,6 +166,19 @@ class Fitter:
             return INVALID_FIT_RESULT
 
         return self.get_chisquare() / ndf
+
+    def get_r_squared(self) -> float:
+        """Return the vertical-residual R-squared diagnostic."""
+        if self.fitData is None or self.function is None:
+            return INVALID_FIT_RESULT
+
+        x = np.asarray([point.x for point in self.fitData], dtype=float)
+        y = np.asarray([point.y for point in self.fitData], dtype=float)
+        residualSum = float(np.sum((y - self.evaluate(x)) ** 2.0))
+        totalSum = float(np.sum((y - np.mean(y)) ** 2.0))
+        if totalSum == 0.0:
+            return np.nan
+        return 1.0 - residualSum / totalSum
 
     def get_residuals(self) -> list[FitResidual]:
         if self.fitData is None or self.fitResults is None:
